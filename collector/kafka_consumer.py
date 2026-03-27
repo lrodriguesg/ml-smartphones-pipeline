@@ -1,7 +1,7 @@
 import json
 import psycopg2
 import os
-from kafka import KafkaConsumer
+from confluent_kafka import Consumer, KafkaError
 from dotenv import load_dotenv
 
 # Carrega as variáveis de ambiente do arquivo .env
@@ -11,8 +11,6 @@ load_dotenv()
 KAFKA_BROKER = 'localhost:9092'
 TOPIC_NAME = 'ml_smartphones_raw'
 
-# Busca as credenciais de forma segura do .env
-# O segundo parâmetro (ex: "localhost") é o valor padrão caso a variável não exista
 DB_HOST = os.getenv("POSTGRES_HOST", "localhost")
 DB_PORT = os.getenv("POSTGRES_PORT", "5432")
 DB_USER = os.getenv("POSTGRES_USER", "admin")
@@ -30,17 +28,17 @@ def get_db_connection():
     )
 
 def run_consumer():
-    print("Iniciando o consumidor do Kafka...")
+    print("Iniciando o consumidor oficial da Confluent...")
     
-    # Configuração do Consumer
-    consumer = KafkaConsumer(
-        TOPIC_NAME,
-        bootstrap_servers=[KAFKA_BROKER],
-        auto_offset_reset='earliest', # Lê desde o começo do tópico se for a primeira vez
-        enable_auto_commit=True,
-        group_id='ml_consumer_group',
-        value_deserializer=lambda x: json.loads(x.decode('utf-8'))
-    )
+    # Configuração do Consumer da Confluent
+    conf = {
+        'bootstrap.servers': KAFKA_BROKER,
+        'group.id': 'ml_consumer_group',
+        'auto.offset.reset': 'earliest' # Lê desde o começo
+    }
+    
+    consumer = Consumer(conf)
+    consumer.subscribe([TOPIC_NAME])
     
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -48,11 +46,34 @@ def run_consumer():
     print("Aguardando mensagens... (Pressione Ctrl+C para parar)")
     
     try:
-        # Loop infinito escutando novas mensagens
-        for message in consumer:
-            produto = message.value
+        empty_polls = 0
+        
+        while True:
+            # Fica escutando a fila. Retorna None se não tiver nada novo no segundo atual
+            msg = consumer.poll(timeout=1.0)
             
-            # A mágica da Idempotência: Se o ID já existir, atualiza os dados em vez de duplicar
+            if msg is None:
+                empty_polls += 1
+                # Se passar 5 segundos sem receber mensagens, encerra o loop
+                if empty_polls >= 5:
+                    print("Nenhuma mensagem nova na fila. Encerrando o consumidor para o Airflow seguir...")
+                    break
+                continue
+            
+            # Zerar o contador assim que receber uma mensagem válida
+            empty_polls = 0
+            
+            if msg.error():
+                if msg.error().code() == KafkaError._PARTITION_EOF:
+                    continue
+                else:
+                    print(f"Erro no Kafka: {msg.error()}")
+                    break
+            
+            # Pega o JSON da mensagem e converte para dicionário Python
+            produto = json.loads(msg.value().decode('utf-8'))
+            
+            # Idempotência no PostgreSQL
             insert_query = """
                 INSERT INTO raw.raw_products (
                     id, title, price, original_price, condition, 
@@ -76,13 +97,8 @@ def run_consumer():
             
             print(f"Salvo no banco: {produto['id']} - {produto['title']}")
             
-            # Condição de saída para não ficar em loop infinito durante nossos testes locais
-            # Assim que ele ler todas as mensagens disponíveis, ele para.
-            # No Airflow, ele fará a carga e encerrará.
-            if message.offset == consumer.highwater(message.topic_partition) - 1:
-                print("Todas as mensagens da fila foram processadas!")
-                break
-            
+    except KeyboardInterrupt:
+        print("Consumidor interrompido pelo usuário.")
     except Exception as e:
         print(f"Erro ao processar mensagem: {e}")
     finally:
