@@ -1,0 +1,15 @@
+ecommerce_pipeline:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      
+      host: "{{ env_var('POSTGRES_HOST', 'localhost') }}"
+      port: 5432
+      user: "{{ env_var('POSTGRES_USER', 'admin') }}"
+      password: "{{ env_var('POSTGRES_PASSWORD', 'teste123') }}"
+      dbname: "{{ env_var('POSTGRES_DB', 'ecommerce_dw') }}"
+      
+      schema: analytics
+      
+      threads: 4

@@ -1,5 +1,17 @@
-venv/
-__pycache__/
+# Segurança (Senhas e Credenciais)
 .env
+
+# Ambiente Virtual Python
+venv/
+env/
+__pycache__/
 *.pyc
-.dbt/
+
+# Arquivos gerados pelo dbt
+dbt/target/
+dbt/dbt_packages/
+dbt/logs/
+
+# Arquivos de Sistema Operacional (Evita lixo do Windows/Mac)
+.DS_Store
+Thumbs.db
