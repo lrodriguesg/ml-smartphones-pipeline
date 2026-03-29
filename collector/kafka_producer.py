@@ -1,8 +1,18 @@
 import os
 import json
 import time
+import logging
 from kafka import KafkaProducer
 from ml_api_client import get_smartphones_data
+
+
+# Configuração do Log Estruturado
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger('KafkaProducer')
 
 # Configurações do Kafka
 KAFKA_BROKER = os.environ.get("KAFKA_BROKER", "kafka:29092")
@@ -17,16 +27,18 @@ def create_producer():
     )
 
 def run_producer():
-    producer = create_producer()
-    print("Buscando dados...")
     
+    logger.info("Iniciando o Produtor Kafka...")
+    producer = create_producer()
+    
+    logger.info("Buscando dados na API do Mercado Livre...")
     produtos = get_smartphones_data()
     
     if not produtos:
-        print("Nenhum produto para enviar.")
+        logger.warning("Nenhum produto foi retornado pela API.")
         return
 
-    print(f"Enviando {len(produtos)} registros para o Kafka...")
+    logger.info(f"Enviando {len(produtos)} registros para o tópico '{TOPIC_NAME}'...")
     
     for produto in produtos:
         # Envia para o tópico
@@ -35,7 +47,7 @@ def run_producer():
         
     # Garante que todas as mensagens na fila interna sejam enviadas
     producer.flush()
-    print("Envio concluído com sucesso!")
+    logger.info("Envio concluído com sucesso!")
 
 if __name__ == "__main__":
     run_producer()

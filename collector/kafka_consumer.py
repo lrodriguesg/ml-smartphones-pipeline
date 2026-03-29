@@ -1,8 +1,18 @@
 import json
 import psycopg2
 import os
+import logging
 from confluent_kafka import Consumer, KafkaError
 
+
+
+# Configuração do Log Estruturado
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger('KafkaConsumer')
 
 # Configurações do Kafka dinâmicas (Se não achar no .env, usa o padrão do Docker)
 KAFKA_BROKER = os.environ.get("KAFKA_BROKER", "kafka:29092")
@@ -26,7 +36,7 @@ def get_db_connection():
     )
 
 def run_consumer():
-    print(f"Iniciando o consumidor da Confluent apontando para: {KAFKA_BROKER}")
+    logger.info(f"Iniciando Consumidor Kafka apontando para: {KAFKA_BROKER}")
     
     # Configuração do Consumer da Confluent
     conf = {
@@ -41,7 +51,7 @@ def run_consumer():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    print("Aguardando mensagens... (Pressione Ctrl+C para parar)")
+    logger.info("Aguardando mensagens... (Pressione Ctrl+C para parar)")
     
     try:
         empty_polls = 0
@@ -54,7 +64,7 @@ def run_consumer():
                 empty_polls += 1
                 # Se passar 5 segundos sem receber mensagens, encerra o loop
                 if empty_polls >= 5:
-                    print("Nenhuma mensagem nova na fila. Encerrando o consumidor para o Airflow seguir...")
+                    logger.info("Nenhuma mensagem nova na fila. Encerrando o consumidor.")
                     break
                 continue
             
@@ -65,7 +75,7 @@ def run_consumer():
                 if msg.error().code() == KafkaError._PARTITION_EOF:
                     continue
                 else:
-                    print(f"Erro no Kafka: {msg.error()}")
+                    logger.error(f"Erro no Kafka: {msg.error()}")
                     break
             
             # Pega o JSON da mensagem e converte para dicionário Python
@@ -93,17 +103,17 @@ def run_consumer():
             cursor.execute(insert_query, produto)
             conn.commit()
             
-            print(f"Salvo no banco: {produto['id']} - {produto['title']}")
+            logger.info(f"Salvo/Atualizado no banco: {produto['id']} - {produto['title']}")
             
     except KeyboardInterrupt:
-        print("Consumidor interrompido pelo usuário.")
+        logger.warning("Consumidor interrompido pelo usuário.")
     except Exception as e:
-        print(f"Erro ao processar mensagem: {e}")
+        logger.error(f"Erro ao processar mensagem: {e}")
     finally:
         cursor.close()
         conn.close()
         consumer.close()
-        print("Conexões encerradas.")
+        logger.info("Conexões com banco e Kafka encerradas.")
 
 if __name__ == "__main__":
     run_consumer()
