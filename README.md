@@ -114,3 +114,12 @@ A transformação foi estruturada seguindo as melhores práticas de Data Enginee
 * **Proteção de Credenciais:** Variáveis sensíveis isoladas em um arquivo `.env` e injetadas de forma nativa no Linux dos containers via Docker Compose.
 * **Macros dbt Customizadas:** Implementação da macro `generate_schema_name.sql` para garantir a nomenclatura limpa dos schemas no banco de dados (`raw`, `staging`, `marts`).
 * **Resiliência do Airflow:** A Task do dbt possui o comando `dbt clean` injetado antes da execução para prevenir quebras causadas por cache residual entre diferentes sistemas operacionais.
+
+---
+
+## 🧠 Decisões de Engenharia e Simulação de Dados
+
+Para garantir a melhor experiência de avaliação e estabilidade do projeto, algumas decisões arquiteturais foram tomadas:
+
+* **Uso de Dados Simulados (Mock):** Em vez de consumir a API real do Mercado Livre a cada execução, o script de extração utiliza um conjunto de dados simulado (*mock*). Essa decisão foi tomada para atender à recomendação do case de **"simular dados históricos"**, permitindo que o painel responda imediatamente às perguntas de variação temporal (como evolução de preços ao longo dos dias) sem exigir que o avaliador aguarde múltiplos dias de coleta real. Isso também torna a execução determinística e imune a *rate limits* ou quedas da API pública.
+* **Resolução do Conflito SCD Tipo 1 vs Tipo 2:** O case exige um pipeline idempotente (que não duplique dados na tabela ao rodar várias vezes). Para isso, implementou-se o `ON CONFLICT DO UPDATE` (SCD Tipo 1). Para não perder a capacidade de medir a variação histórica de preços (Pergunta 7) sem inflar o banco de dados com duplicatas, a variação foi calculada utilizando as colunas `original_price` e `price` fornecidas na mesma linha.
