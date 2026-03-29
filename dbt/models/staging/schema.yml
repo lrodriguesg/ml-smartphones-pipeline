@@ -1,0 +1,13 @@
+version: 2
+
+models:
+  - name: stg_products
+    description: "Modelo de staging com a limpeza, tipagem correta e cálculo inicial de desconto dos produtos."
+    columns:
+      - name: product_id
+        description: "ID único do produto."
+        tests:
+          - unique
+          - not_null
+      - name: discount_percentage
+        description: "Percentagem de desconto calculada com base no preço original e atual."

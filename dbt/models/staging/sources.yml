@@ -1,7 +1,14 @@
 version: 2
 
 sources:
-  - name: raw_data      
-    schema: raw         
+  - name: raw_data
+    schema: raw
     tables:
       - name: raw_products
+        description: "Tabela bruta com os dados recolhidos da API do Mercado Livre via Kafka."
+        columns:
+          - name: id
+            description: "ID único do produto no Mercado Livre."
+            tests:
+              - unique
+              - not_null

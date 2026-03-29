@@ -43,5 +43,28 @@ services:
       # Cria o tópico automaticamente ao iniciar
       KAFKA_CREATE_TOPICS: "ml_smartphones_raw:1:1"
 
+  # 4. APACHE AIRFLOW (O Maestro)
+  airflow:
+    image: apache/airflow:2.9.1
+    container_name: airflow_standalone
+    env_file:
+      - .env
+    command: standalone
+    environment:
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      # Instala Kafka e dbt dentro do Airflow
+      - _PIP_ADDITIONAL_REQUIREMENTS=kafka-python confluent-kafka==2.3.0 requests python-dotenv psycopg2-binary dbt-postgres==1.8.2
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./collector:/opt/airflow/collector
+      - ./dbt:/opt/airflow/dbt
+      - ./.env:/opt/airflow/.env
+    depends_on:
+      - postgres
+      - kafka
+
 volumes:
   postgres_data:

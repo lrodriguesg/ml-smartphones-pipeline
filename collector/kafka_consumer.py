@@ -2,16 +2,14 @@ import json
 import psycopg2
 import os
 from confluent_kafka import Consumer, KafkaError
-from dotenv import load_dotenv
 
-# Carrega as variáveis de ambiente do arquivo .env
-load_dotenv()
 
-# Configurações do Kafka
-KAFKA_BROKER = 'localhost:9092'
+# Configurações do Kafka dinâmicas (Se não achar no .env, usa o padrão do Docker)
+KAFKA_BROKER = os.environ.get("KAFKA_BROKER", "kafka:29092")
 TOPIC_NAME = 'ml_smartphones_raw'
 
-DB_HOST = os.getenv("POSTGRES_HOST", "localhost")
+# Configurações do Banco dinâmicas
+DB_HOST = os.getenv("POSTGRES_HOST", "postgres")
 DB_PORT = os.getenv("POSTGRES_PORT", "5432")
 DB_USER = os.getenv("POSTGRES_USER", "admin")
 DB_PASSWORD = os.getenv("POSTGRES_PASSWORD", "admin")
@@ -28,7 +26,7 @@ def get_db_connection():
     )
 
 def run_consumer():
-    print("Iniciando o consumidor oficial da Confluent...")
+    print(f"Iniciando o consumidor da Confluent apontando para: {KAFKA_BROKER}")
     
     # Configuração do Consumer da Confluent
     conf = {

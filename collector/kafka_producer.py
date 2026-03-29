@@ -1,17 +1,18 @@
+import os
 import json
 import time
 from kafka import KafkaProducer
 from ml_api_client import get_smartphones_data
 
 # Configurações do Kafka
-KAFKA_BROKER = 'localhost:9092'
+KAFKA_BROKER = os.environ.get("KAFKA_BROKER", "kafka:29092")
 TOPIC_NAME = 'ml_smartphones_raw'
 
 def create_producer():
     """Cria e retorna um producer do Kafka."""
+    
     return KafkaProducer(
         bootstrap_servers=[KAFKA_BROKER],
-        # Converte o dicionário Python para string JSON em bytes antes de enviar
         value_serializer=lambda v: json.dumps(v).encode('utf-8')
     )
 

@@ -7,7 +7,7 @@ ecommerce_pipeline:
       host: "{{ env_var('POSTGRES_HOST', 'localhost') }}"
       port: 5432
       user: "{{ env_var('POSTGRES_USER', 'admin') }}"
-      password: "{{ env_var('POSTGRES_PASSWORD', 'teste123') }}"
+      password: "{{ env_var('POSTGRES_PASSWORD', 'admin') }}"
       dbname: "{{ env_var('POSTGRES_DB', 'ecommerce_dw') }}"
       
       schema: analytics

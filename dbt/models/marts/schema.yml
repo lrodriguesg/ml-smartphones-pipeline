@@ -1,0 +1,26 @@
+version: 2
+
+models:
+  - name: dim_sellers
+    description: "Tabela de dimensão (Dimension) contendo métricas e informações agregadas por vendedor."
+    columns:
+      - name: seller_id
+        description: "ID único do vendedor."
+        tests:
+          - unique
+          - not_null
+      - name: total_distinct_products
+        description: "Quantidade total de produtos diferentes anunciados pelo vendedor."
+      - name: lifetime_sold_quantity
+        description: "Soma total de unidades vendidas pelo vendedor nestes produtos."
+
+  - name: fct_products
+    description: "Tabela de factos (Fact) com os dados enriquecidos dos produtos e categorização de descontos."
+    columns:
+      - name: product_id
+        description: "Chave primária do produto."
+        tests:
+          - unique
+          - not_null
+      - name: discount_category
+        description: "Categoria de desconto aplicada ao produto (ex: Super Desconto (20%+), Sem Desconto)."
