@@ -117,9 +117,11 @@ A transformação foi estruturada seguindo as melhores práticas de Data Enginee
 
 ---
 
-## 🧠 Decisões de Engenharia e Simulação de Dados
+## 🧠 Decisões de Engenharia e Trade-offs
 
-Para garantir a melhor experiência de avaliação e estabilidade do projeto, algumas decisões arquiteturais foram tomadas:
+Para garantir a melhor experiência de avaliação e o funcionamento *end-to-end* ininterrupto do projeto, as seguintes decisões arquiteturais foram tomadas:
 
-* **Uso de Dados Simulados (Mock):** Em vez de consumir a API real do Mercado Livre a cada execução, o script de extração utiliza um conjunto de dados simulado (*mock*). Essa decisão foi tomada para atender à recomendação do case de **"simular dados históricos"**, permitindo que o painel responda imediatamente às perguntas de variação temporal (como evolução de preços ao longo dos dias) sem exigir que o avaliador aguarde múltiplos dias de coleta real. Isso também torna a execução determinística e imune a *rate limits* ou quedas da API pública.
-* **Resolução do Conflito SCD Tipo 1 vs Tipo 2:** O case exige um pipeline idempotente (que não duplique dados na tabela ao rodar várias vezes). Para isso, implementou-se o `ON CONFLICT DO UPDATE` (SCD Tipo 1). Para não perder a capacidade de medir a variação histórica de preços (Pergunta 7) sem inflar o banco de dados com duplicatas, a variação foi calculada utilizando as colunas `original_price` e `price` fornecidas na mesma linha.
+* **Mock de Dados vs. API do Mercado Livre:** O case sugeria o consumo do endpoint `GET https://api.mercadolibre.com/sites/MLB/search` ressaltando que "não é necessário autenticação". No entanto, devido a atualizações recentes nas políticas da API do Mercado Livre, esse endpoint agora exige autenticação (Bearer Token via Mercado Pago) e a criação prévia de uma aplicação no portal de desenvolvedores. 
+Para não quebrar a premissa de "zero configuração manual" (obrigando o avaliador a gerar seus próprios tokens) e para atender perfeitamente à recomendação do case de **"simular dados históricos"** (essencial para responder às perguntas 5 e 7), optei por construir um gerador de dados simulados (Mock) diretamente no extrator. Isso garante que o pipeline rode de forma determinística, segura e sem riscos de *rate limits* ou bloqueios de API.
+
+* **Idempotência (SCD Tipo 1) vs Histórico de Preços (SCD Tipo 2):** O case exige um pipeline idempotente (que não duplique dados na tabela ao rodar várias vezes). Para isso, implementou-se o `ON CONFLICT DO UPDATE` (SCD Tipo 1). Para não perder a capacidade de medir a variação histórica de preços (Pergunta 7) sem inflar o banco de dados com duplicatas de log, a variação de descontos foi calculada comparando inteligentemente as colunas `original_price` e `price` registradas na mesma entidade.
